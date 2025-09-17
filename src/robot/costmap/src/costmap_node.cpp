@@ -1,27 +1,52 @@
+/**
+ * @file costmap_node.cpp
+ * @author Sean Yang
+ * @brief This node subscribes to LIDAR data and generates a 2D occupancy grid costmap.
+ * @date 2025-09-10
+ */
+
 #include <chrono>
 #include <memory>
+#include <vector>
+#include <cmath>
 
 #include "costmap_node.hpp"
 
-CostmapNode::CostmapNode()
-    : Node("costmap"), costmap_(robot::CostmapCore(this->get_logger())) {
-  // Initialize the constructs and their parameters
-  string_pub_ =
-      this->create_publisher<std_msgs::msg::String>("/test_topic", 10);
-  timer_ =
-      this->create_wall_timer(std::chrono::milliseconds(500),
-                              std::bind(&CostmapNode::publishMessage, this));
+CostmapNode::CostmapNode() : Node("costmap"),
+                             costmap_(robot::CostmapCore(this->get_logger()))
+{
+  // initialize subscriber and publisher
+  lidar_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+      "/lidar", 10, std::bind(&CostmapNode::laserCallback, this, std::placeholders::_1));
+  costmap_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("/costmap", 10);
+
+  // initialize costmap
+  origin_.set__position(geometry_msgs::msg::Point()
+                            .set__x(origin_x_)
+                            .set__y(origin_y_)
+                            .set__z(origin_z_));
+  origin_.set__orientation(geometry_msgs::msg::Quaternion()
+                               .set__x(origin_orientation_x_)
+                               .set__y(origin_orientation_y_)
+                               .set__z(origin_orientation_z_)
+                               .set__w(origin_orientation_w_));
+  costmap_.initialize(width_, height_, resolution_, origin_, inflation_radius_, obstacle_cost_);
 }
 
-// Define the timer to publish a message every 500ms
-void CostmapNode::publishMessage() {
-  auto message = std_msgs::msg::String();
-  message.data = "Hello, ROS 2!";
-  RCLCPP_INFO(this->get_logger(), "Publishing: '%s'", message.data.c_str());
-  string_pub_->publish(message);
+void CostmapNode::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
+{
+  costmap_.update(laserscan_msg);
+  publishCostmap();
 }
 
-int main(int argc, char **argv) {
+void CostmapNode::publishCostmap()
+{
+  RCLCPP_INFO(this->get_logger(), "Publishing occupancy grid");
+  costmap_pub_->publish(*costmap_.getCostmap());
+}
+
+int main(int argc, char **argv)
+{
   rclcpp::init(argc, argv);
   rclcpp::spin(std::make_shared<CostmapNode>());
   rclcpp::shutdown();
