@@ -38,7 +38,6 @@ CostmapNode::CostmapNode() : Node("costmap"),
 void CostmapNode::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
 {
   costmap_.update(laserscan_msg);
-  RCLCPP_INFO(this->get_logger(), "Publishing occupancy grid");
   costmap_pub_->publish(*costmap_.getCostmap());
 }
 
