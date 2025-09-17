@@ -11,7 +11,7 @@
 CostmapNode::CostmapNode() : Node("costmap"), 
     costmap_(robot::CostmapCore(this->get_logger()))
 {
-  // Initialize the constructs and their parameters
+  // initialize subscriber and publisher
   lidar_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       "/lidar", 10, std::bind(&CostmapNode::laserCallback, 
       this, 

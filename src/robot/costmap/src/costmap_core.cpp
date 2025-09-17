@@ -50,6 +50,9 @@ void CostmapCore::update(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_
 
     angle += angle_increment;
   }
+
+  // inflate obstacles after updating the costmap
+  inflateObstacles();
 }
 
 void CostmapCore::initialize(
