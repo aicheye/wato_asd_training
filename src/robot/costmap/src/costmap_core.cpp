@@ -12,9 +12,7 @@ namespace robot
 {
 
   CostmapCore::CostmapCore(const rclcpp::Logger &logger)
-      : occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger)
-  {
-  }
+      : occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger) {}
 
   void CostmapCore::update(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
   {
@@ -77,6 +75,8 @@ namespace robot
     // private member field
     inflation_radius_ = inflation_radius;
     obstacle_cost_ = obstacle_cost;
+
+    RCLCPP_INFO(logger_, "Initialized costmap with size %dx%d, resolution %.2f", width, height, resolution);
   }
 
   nav_msgs::msg::OccupancyGrid::SharedPtr CostmapCore::getCostmap()
@@ -106,7 +106,7 @@ namespace robot
               if (nx >= 0 && nx < occupancygrid_data_->info.width && ny >= 0 && ny < occupancygrid_data_->info.height)
               {
                 // pythagorean distance
-                float distance = sqrt(dx * dx + dy * dy) * occupancygrid_data_->info.resolution;
+                float distance = std::hypot(dx, dy) * occupancygrid_data_->info.resolution;
                 if (distance <= inflation_radius_)
                 {
                   int index = ny * occupancygrid_data_->info.width + nx;

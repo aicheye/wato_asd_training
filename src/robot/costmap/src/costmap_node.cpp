@@ -31,16 +31,13 @@ CostmapNode::CostmapNode() : Node("costmap"),
                                .set__z(origin_orientation_z_)
                                .set__w(origin_orientation_w_));
   costmap_.initialize(width_, height_, resolution_, origin_, inflation_radius_, obstacle_cost_);
+
+  RCLCPP_INFO(this->get_logger(), "CostmapNode has been initialized.");
 }
 
 void CostmapNode::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
 {
   costmap_.update(laserscan_msg);
-  publishCostmap();
-}
-
-void CostmapNode::publishCostmap()
-{
   RCLCPP_INFO(this->get_logger(), "Publishing occupancy grid");
   costmap_pub_->publish(*costmap_.getCostmap());
 }
