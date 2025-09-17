@@ -1,115 +1,123 @@
+/**
+ * @file costmap_core.cpp
+ * @author Sean Yang
+ * @brief This file contains the implementation of the CostmapCore class, which is responsible for
+ *        generating and updating the 2D occupancy grid costmap based on LIDAR data.
+ * @date 2025-09-10
+ */
+
 #include "costmap_core.hpp"
-#include "sensor_msgs/msg/laser_scan.hpp"
-#include "geometry_msgs/msg/pose.hpp"
 
 namespace robot
 {
 
-CostmapCore::CostmapCore(const rclcpp::Logger& logger) : occupancygrid_data_(
-  std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger) {}
-
-void CostmapCore::update(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
-{
-  // fill with zeros
-  occupancygrid_data_->data.assign(occupancygrid_data_->info.height * occupancygrid_data_->info.width, 0);
-
-  // access laser scan data
-  float angle_min = laserscan_msg->angle_min;
-  float angle_max = laserscan_msg->angle_max;
-  float angle_increment = laserscan_msg->angle_increment;
-  float range_min = laserscan_msg->range_min;
-  float range_max = laserscan_msg->range_max;
-  std::vector<float> ranges = laserscan_msg->ranges;
-
-  // iterate over the ranges detected
-  float angle = angle_min;
-  for (float range : ranges)
+  CostmapCore::CostmapCore(const rclcpp::Logger &logger)
+      : occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger)
   {
-    if (range < range_min || range > range_max)
-    {
-      angle += angle_increment;
-      continue;
-    }
-
-    float x = range * cos(angle);
-    float y = range * sin(angle);
-    
-    // convert to grid coordinates
-    int grid_x = static_cast<int>((x - occupancygrid_data_->info.origin.position.x) / 
-        occupancygrid_data_->info.resolution);
-    int grid_y = static_cast<int>((y - occupancygrid_data_->info.origin.position.y) /
-        occupancygrid_data_->info.resolution);
-    
-    // check if the point is within the grid bounds
-    if (grid_x >= 0 && grid_x < occupancygrid_data_->info.width &&
-        grid_y >= 0 && grid_y < occupancygrid_data_->info.height)
-    {
-      // mark the cell as occupied (100)
-      occupancygrid_data_->data[grid_y * occupancygrid_data_->info.width + grid_x] = obstacle_cost_;
-    }
-
-    angle += angle_increment;
   }
 
-  // inflate obstacles after updating the costmap
-  inflateObstacles();
-}
-
-void CostmapCore::initialize(
-  int height, 
-  int width, 
-  double resolution, 
-  geometry_msgs::msg::Pose origin, 
-  double inflation_radius, 
-  double obstacle_cost)
-{
-  // assign member fields
-  occupancygrid_data_->info.height = height;
-  occupancygrid_data_->info.width = width;
-  occupancygrid_data_->info.resolution = resolution;
-  occupancygrid_data_->info.origin = origin;
-  occupancygrid_data_->data.assign(height * width, 0);
-
-  // private member field
-  inflation_radius_ = inflation_radius;
-  obstacle_cost_ = obstacle_cost;
-}
-
-nav_msgs::msg::OccupancyGrid::SharedPtr CostmapCore::getCostmap()
-{
-  return occupancygrid_data_;
-}
-
-void CostmapCore::inflateObstacles()
-{
-  int inflation_cells = static_cast<int>(inflation_radius_ / occupancygrid_data_->info.resolution);
-  std::vector<int8_t> inflated_data = occupancygrid_data_->data;
-
-  for (int y = 0; y < occupancygrid_data_->info.height; ++y)
+  void CostmapCore::update(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
   {
-    for (int x = 0; x < occupancygrid_data_->info.width; ++x)
+    // fill with zeros
+    occupancygrid_data_->data =
+        std::vector<int8_t>(occupancygrid_data_->info.height * occupancygrid_data_->info.width, 0);
+
+    // access laser scan data
+    float angle_min = laserscan_msg->angle_min;
+    float angle_max = laserscan_msg->angle_max;
+    float angle_increment = laserscan_msg->angle_increment;
+    float range_min = laserscan_msg->range_min;
+    float range_max = laserscan_msg->range_max;
+    std::vector<float> ranges = laserscan_msg->ranges;
+
+    // iterate over the ranges detected
+    float angle = angle_min;
+    for (float range : ranges)
     {
-      if (occupancygrid_data_->data[y * occupancygrid_data_->info.width + x] == obstacle_cost_)
+      if (range < range_min || range > range_max)
       {
-        // Inflate around the occupied cell
-        for (int dy = -inflation_cells; dy <= inflation_cells; ++dy)
+        angle += angle_increment;
+        continue;
+      }
+
+      float x = range * cos(angle);
+      float y = range * sin(angle);
+
+      // convert to grid coordinates
+      int grid_x =
+          static_cast<int>((x - occupancygrid_data_->info.origin.position.x) / occupancygrid_data_->info.resolution);
+      int grid_y =
+          static_cast<int>((y - occupancygrid_data_->info.origin.position.y) / occupancygrid_data_->info.resolution);
+
+      // check if the point is within the grid bounds
+      if (grid_x >= 0 && grid_x < occupancygrid_data_->info.width && grid_y >= 0 &&
+          grid_y < occupancygrid_data_->info.height)
+      {
+        // mark the cell as occupied
+        occupancygrid_data_->data[grid_y * occupancygrid_data_->info.width + grid_x] = obstacle_cost_;
+      }
+
+      angle += angle_increment;
+    }
+
+    // inflate obstacles after updating the costmap
+    inflateObstacles();
+  }
+
+  void CostmapCore::initialize(int height, int width, double resolution, geometry_msgs::msg::Pose origin,
+                               double inflation_radius, double obstacle_cost)
+  {
+    // assign member fields
+    occupancygrid_data_->info.height = height;
+    occupancygrid_data_->info.width = width;
+    occupancygrid_data_->info.resolution = resolution;
+    occupancygrid_data_->info.origin = origin;
+    occupancygrid_data_->data = std::vector<int8_t>(height * width, 0);
+
+    // private member field
+    inflation_radius_ = inflation_radius;
+    obstacle_cost_ = obstacle_cost;
+  }
+
+  nav_msgs::msg::OccupancyGrid::SharedPtr CostmapCore::getCostmap()
+  {
+    return occupancygrid_data_;
+  }
+
+  void CostmapCore::inflateObstacles()
+  {
+    int inflation_cells = static_cast<int>(inflation_radius_ / occupancygrid_data_->info.resolution);
+    std::vector<int8_t> inflated_data = occupancygrid_data_->data;
+
+    for (int y = 0; y < occupancygrid_data_->info.height; ++y)
+    {
+      for (int x = 0; x < occupancygrid_data_->info.width; ++x)
+      {
+        if (occupancygrid_data_->data[y * occupancygrid_data_->info.width + x] == obstacle_cost_)
         {
-          for (int dx = -inflation_cells; dx <= inflation_cells; ++dx)
+          // inflate around the occupied cell
+          for (int dy = -inflation_cells; dy <= inflation_cells; ++dy)
           {
-            int nx = x + dx;
-            int ny = y + dy;
-            if (nx >= 0 && nx < occupancygrid_data_->info.width &&
-                ny >= 0 && ny < occupancygrid_data_->info.height)
+            for (int dx = -inflation_cells; dx <= inflation_cells; ++dx)
             {
-              float distance = sqrt(dx * dx + dy * dy) * occupancygrid_data_->info.resolution;
-              if (distance <= inflation_radius_)
+              // check bounds
+              int nx = x + dx;
+              int ny = y + dy;
+              if (nx >= 0 && nx < occupancygrid_data_->info.width && ny >= 0 && ny < occupancygrid_data_->info.height)
               {
-                int index = ny * occupancygrid_data_->info.width + nx;
-                // Calculate cost based on distance
-                int cost = static_cast<int>(obstacle_cost_ * (1.0 - (distance / inflation_radius_)));
-                if (cost > inflated_data[index])
+                // pythagorean distance
+                float distance = sqrt(dx * dx + dy * dy) * occupancygrid_data_->info.resolution;
+                if (distance <= inflation_radius_)
                 {
-                  inflated_data[index] = std::min(cost, static_cast<int>(obstacle_cost_));
+                  int index = ny * occupancygrid_data_->info.width + nx;
+                  // calculate cost based on distance
+                  int cost = static_cast<int>(obstacle_cost_ * (1.0 - (distance / inflation_radius_)));
+                  // only increase cost, do not decrease
+                  if (cost > inflated_data[index])
+                  {
+                    // cap the cost to obstacle_cost_
+                    inflated_data[index] = std::min(cost, static_cast<int>(obstacle_cost_));
+                  }
                 }
               }
             }
@@ -117,9 +125,8 @@ void CostmapCore::inflateObstacles()
         }
       }
     }
+
+    occupancygrid_data_->data = inflated_data;
   }
 
-  occupancygrid_data_->data = inflated_data;
-}
-
-}
+} // namespace robot
