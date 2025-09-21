@@ -12,9 +12,7 @@ namespace robot
 {
 
   CostmapCore::CostmapCore(const rclcpp::Logger &logger)
-      : occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger)
-  {
-  }
+      : has_data_(false), occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger) {}
 
   void CostmapCore::update(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
   {
@@ -55,10 +53,14 @@ namespace robot
       {
         // mark the cell as occupied
         occupancygrid_data_->data[grid_y * occupancygrid_data_->info.width + grid_x] = obstacle_cost_;
+        has_data_ = true;
       }
 
       angle += angle_increment;
     }
+
+    occupancygrid_data_->header.stamp = laserscan_msg->header.stamp;
+    occupancygrid_data_->info.map_load_time = laserscan_msg->header.stamp;
 
     // inflate obstacles after updating the costmap
     inflateObstacles();
@@ -68,6 +70,7 @@ namespace robot
                                double inflation_radius, double obstacle_cost)
   {
     // assign member fields
+    occupancygrid_data_->header.frame_id = "robot/chassis/lidar";
     occupancygrid_data_->info.height = height;
     occupancygrid_data_->info.width = width;
     occupancygrid_data_->info.resolution = resolution;
@@ -77,6 +80,8 @@ namespace robot
     // private member field
     inflation_radius_ = inflation_radius;
     obstacle_cost_ = obstacle_cost;
+
+    RCLCPP_INFO(logger_, "Initialized costmap with size %dx%d, resolution %.2f", width, height, resolution);
   }
 
   nav_msgs::msg::OccupancyGrid::SharedPtr CostmapCore::getCostmap()
@@ -106,7 +111,7 @@ namespace robot
               if (nx >= 0 && nx < occupancygrid_data_->info.width && ny >= 0 && ny < occupancygrid_data_->info.height)
               {
                 // pythagorean distance
-                float distance = sqrt(dx * dx + dy * dy) * occupancygrid_data_->info.resolution;
+                float distance = std::hypot(dx, dy) * occupancygrid_data_->info.resolution;
                 if (distance <= inflation_radius_)
                 {
                   int index = ny * occupancygrid_data_->info.width + nx;

@@ -25,6 +25,13 @@ FROM ${BASE_IMAGE} AS dependencies
 
 # ADD MORE DEPENDENCIES HERE
 
+# Install KDL headers and tf2_geometry_msgs for tf2::doTransform and kdl/frames.hpp
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    liborocos-kdl-dev \
+    ros-humble-kdl-parser \
+    ros-humble-tf2-geometry-msgs && \
+    rm -rf /var/lib/apt/lists/*
+
 # Install Rosdep requirements
 COPY --from=source /tmp/colcon_install_list /tmp/colcon_install_list
 RUN apt-fast install -qq -y --no-install-recommends $(cat /tmp/colcon_install_list)

@@ -29,13 +29,15 @@ namespace robot
 
     nav_msgs::msg::OccupancyGrid::SharedPtr getCostmap();
 
-    void inflateObstacles();
+    bool has_data_;
 
   private:
     rclcpp::Logger logger_;
     nav_msgs::msg::OccupancyGrid::SharedPtr occupancygrid_data_;
     double inflation_radius_;
     double obstacle_cost_;
+
+    void inflateObstacles();
   };
 
 } // namespace robot
