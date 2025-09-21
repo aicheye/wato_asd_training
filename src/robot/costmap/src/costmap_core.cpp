@@ -12,7 +12,7 @@ namespace robot
 {
 
   CostmapCore::CostmapCore(const rclcpp::Logger &logger)
-      : occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger) {}
+      : has_data_(false), occupancygrid_data_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger) {}
 
   void CostmapCore::update(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
   {
@@ -53,10 +53,14 @@ namespace robot
       {
         // mark the cell as occupied
         occupancygrid_data_->data[grid_y * occupancygrid_data_->info.width + grid_x] = obstacle_cost_;
+        has_data_ = true;
       }
 
       angle += angle_increment;
     }
+
+    occupancygrid_data_->header.stamp = laserscan_msg->header.stamp;
+    occupancygrid_data_->info.map_load_time = laserscan_msg->header.stamp;
 
     // inflate obstacles after updating the costmap
     inflateObstacles();
@@ -66,6 +70,7 @@ namespace robot
                                double inflation_radius, double obstacle_cost)
   {
     // assign member fields
+    occupancygrid_data_->header.frame_id = "robot/chassis/lidar";
     occupancygrid_data_->info.height = height;
     occupancygrid_data_->info.width = width;
     occupancygrid_data_->info.resolution = resolution;

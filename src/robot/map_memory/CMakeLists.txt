@@ -14,6 +14,9 @@ endif()
 find_package(ament_cmake REQUIRED) # ROS2 build tool
 find_package(rclcpp REQUIRED)      # ROS2 C++ package
 find_package(nav_msgs REQUIRED)    # ROS2 package for occupancy grid message type
+find_package(tf2 REQUIRED)        # ROS2 package for tf2
+find_package(tf2_ros REQUIRED)    # ROS2 package for tf2_ros
+find_package(tf2_geometry_msgs REQUIRED) # ROS2 package for tf2 with geometry messages
 
 # Compiles source files into a library
 # A library is not executed, instead other executables can link
@@ -29,6 +32,9 @@ target_include_directories(map_memory_lib
 ament_target_dependencies(map_memory_lib 
   rclcpp
   nav_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
 )
 
 # Create ROS2 node executable from source files

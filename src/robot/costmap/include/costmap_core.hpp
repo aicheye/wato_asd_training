@@ -29,6 +29,8 @@ namespace robot
 
     nav_msgs::msg::OccupancyGrid::SharedPtr getCostmap();
 
+    bool has_data_;
+
   private:
     rclcpp::Logger logger_;
     nav_msgs::msg::OccupancyGrid::SharedPtr occupancygrid_data_;

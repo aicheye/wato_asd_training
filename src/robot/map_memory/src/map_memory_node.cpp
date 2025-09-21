@@ -1,6 +1,6 @@
 #include "map_memory_node.hpp"
 
-MapMemoryNode::MapMemoryNode() : Node("map_memory"), map_memory_(robot::MapMemoryCore(this->get_logger()))
+MapMemoryNode::MapMemoryNode() : Node("map_memory"), should_update_map_(true), tf_buffer_(this->get_clock()), tf_listener_(std::make_unique<tf2_ros::TransformListener>(tf_buffer_)), map_memory_(robot::MapMemoryCore(this->get_logger()))
 {
   // initialize subscribers and publisher
   costmap_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
@@ -8,6 +8,9 @@ MapMemoryNode::MapMemoryNode() : Node("map_memory"), map_memory_(robot::MapMemor
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom/filtered", 10, std::bind(&MapMemoryNode::odomCallback, this, std::placeholders::_1));
   map_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("/map", 10);
+
+  // initialize the transformer listener
+  tf_listener_ = std::make_unique<tf2_ros::TransformListener>(tf_buffer_);
 
   // initialize timer
   timer_ = this->create_wall_timer(
@@ -61,9 +64,19 @@ void MapMemoryNode::timerCallback()
 {
   if (costmap_received_ && should_update_map_)
   {
-    map_memory_.integrateMap(latest_costmap_, latest_odom_);
-    RCLCPP_INFO(this->get_logger(), "Publishing updated map");
-    map_pub_->publish(map_memory_.getMap());
+    try
+    {
+      geometry_msgs::msg::TransformStamped transform = tf_buffer_.lookupTransform(
+          "sim_world", "robot/chassis/lidar", latest_costmap_->header.stamp, rclcpp::Duration::from_seconds(0.1));
+      map_memory_.integrateMap(latest_costmap_, std::make_shared<geometry_msgs::msg::TransformStamped>(transform));
+      RCLCPP_INFO(this->get_logger(), "Publishing updated map");
+      map_pub_->publish(map_memory_.getMap());
+      should_update_map_ = false;
+    }
+    catch (tf2::TransformException &ex)
+    {
+      RCLCPP_WARN(this->get_logger(), "Transform failed: %s", ex.what());
+    }
   }
 }
 

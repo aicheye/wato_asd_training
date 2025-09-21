@@ -38,7 +38,9 @@ CostmapNode::CostmapNode() : Node("costmap"),
 void CostmapNode::laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg)
 {
   costmap_.update(laserscan_msg);
-  costmap_pub_->publish(*costmap_.getCostmap());
+  if (costmap_.has_data_) {
+    costmap_pub_->publish(*costmap_.getCostmap());
+  }
 }
 
 int main(int argc, char **argv)

@@ -9,19 +9,6 @@
 #define COSTMAP_NODE_HPP_
 
 #include "costmap_core.hpp"
- 
-class CostmapNode : public rclcpp::Node {
-  public:
-    CostmapNode();
-    
-    // Place callback function here
-    void publishMessage();
- 
-  private:
-    robot::CostmapCore costmap_;
-    // Place these constructs here
-    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr string_pub_;
-    rclcpp::TimerBase::SharedPtr timer_;
 
 class CostmapNode : public rclcpp::Node
 {
@@ -46,7 +33,7 @@ private:
   const double origin_orientation_z_ = 0.0;
   const double origin_orientation_w_ = 1.0;
   geometry_msgs::msg::Pose origin_;
-  const double inflation_radius_ = 0.3; // meters
+  const double inflation_radius_ = 1.0; // meters
   const double obstacle_cost_ = 100.0;
 
   void laserCallback(const sensor_msgs::msg::LaserScan::SharedPtr laserscan_msg);
