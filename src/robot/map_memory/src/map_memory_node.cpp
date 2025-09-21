@@ -1,3 +1,11 @@
+/**
+ * @file map_memory_node.cpp
+ * @author Sean Yang
+ * @brief ROS2 node for publishing a global occupancy grid map by integrating
+ *        local costmaps and odometry data.
+ * @date 2025-09-21
+ */
+
 #include "map_memory_node.hpp"
 
 MapMemoryNode::MapMemoryNode() : Node("map_memory"), should_update_map_(true), tf_buffer_(this->get_clock()), tf_listener_(std::make_unique<tf2_ros::TransformListener>(tf_buffer_)), map_memory_(robot::MapMemoryCore(this->get_logger()))
@@ -70,7 +78,7 @@ void MapMemoryNode::timerCallback()
           "sim_world", "robot/chassis/lidar", latest_costmap_->header.stamp, rclcpp::Duration::from_seconds(0.1));
       map_memory_.integrateMap(latest_costmap_, std::make_shared<geometry_msgs::msg::TransformStamped>(transform));
       RCLCPP_INFO(this->get_logger(), "Publishing updated map");
-      map_pub_->publish(map_memory_.getMap());
+      map_pub_->publish(*map_memory_.getMap());
       should_update_map_ = false;
     }
     catch (tf2::TransformException &ex)

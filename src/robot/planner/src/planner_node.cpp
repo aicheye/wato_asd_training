@@ -1,3 +1,11 @@
+/**
+ * @file planner_node.cpp
+ * @author Girish Munukutla Srikanth
+ * @brief Implementation of the PlannerNode class for publishing planned paths 
+ *        based on odometry, map, and goal inputs.
+ * @date 2025-09-21
+ */
+
 #include "planner_node.hpp"
 #include <chrono>
 #include <cmath>
@@ -7,6 +15,8 @@ using namespace std::chrono_literals;
 
 PlannerNode::PlannerNode() : Node("planner_node"), state_(State::WAITING_FOR_GOAL),
                              goal_received_(false), goal_timeout_(10.0), goal_tolerance_(0.5) {
+    // declare a dummy parameter to satisfy foxglove_bridge
+    this->declare_parameter("dummy_param", 0);
 
     map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>("/map", 10,
                 std::bind(&PlannerNode::mapCallback, this, std::placeholders::_1));
@@ -65,7 +75,7 @@ void PlannerNode::resetGoal(){
     goal_received_ = false;
     nav_msgs::msg::Path empty_path;
     empty_path.header.stamp = now();
-    empty_path.header.frame_id = "map";
+    empty_path.header.frame_id = "sim_world";
     path_pub_->publish(empty_path);
 }
 
@@ -79,9 +89,14 @@ CellIndex PlannerNode::worldToGrid(double wx, double wy){
 geometry_msgs::msg::PoseStamped PlannerNode::gridToWorld(const CellIndex &idx){
     geometry_msgs::msg::PoseStamped pose;
     std::lock_guard<std::mutex> lock(map_mutex_);
-    pose.header.frame_id = "map";
-    pose.pose.position.x = map_.info.origin.position.x + (idx.x+0.5)*map_.info.resolution;
-    pose.pose.position.y = map_.info.origin.position.y + (idx.y+0.5)*map_.info.resolution;
+    pose.header.frame_id = "sim_world";
+    pose.header.stamp = now();
+    pose.pose.position.x = (idx.x + 0.5) * map_.info.resolution + map_.info.origin.position.x;
+    pose.pose.position.y = (idx.y + 0.5) * map_.info.resolution + map_.info.origin.position.y;
+    pose.pose.position.z = 0.0;
+    pose.pose.orientation.x = 0.0;
+    pose.pose.orientation.y = 0.0;
+    pose.pose.orientation.z = 0.0;
     pose.pose.orientation.w = 1.0;
     return pose;
 }
@@ -91,6 +106,8 @@ void PlannerNode::planPath(){
         RCLCPP_WARN(get_logger(), "Cannot plan path: missing goal or map.");
         return;
     }
+
+    RCLCPP_INFO(get_logger(), "Planning from (%f, %f) to (%f, %f)", robot_pose_.position.x, robot_pose_.position.y, goal_.point.x, goal_.point.y);
 
     CellIndex start = worldToGrid(robot_pose_.position.x, robot_pose_.position.y);
     CellIndex goal_idx = worldToGrid(goal_.point.x, goal_.point.y);
@@ -104,13 +121,15 @@ void PlannerNode::planPath(){
         }
     }
 
-    nav_msgs::msg::Path path;
-    path.header.stamp = now();
-    path.header.frame_id = "map";
-    for(const auto &cell : grid_path) path.poses.push_back(gridToWorld(cell));
+    RCLCPP_INFO(get_logger(), "Path found with %zu waypoints.", grid_path.size());
 
-    path_pub_->publish(path);
-    RCLCPP_INFO(get_logger(), "Published path with %zu waypoints.", path.poses.size());
+    nav_msgs::msg::Path::SharedPtr path = std::make_shared<nav_msgs::msg::Path>();
+    path->header.stamp = now();
+    path->header.frame_id = "map";
+    for(const auto &cell : grid_path) path->poses.push_back(gridToWorld(cell));
+
+    path_pub_->publish(*path);
+    RCLCPP_INFO(get_logger(), "Published path with %zu waypoints.", path->poses.size());
 }
 
 int main(int argc, char **argv){

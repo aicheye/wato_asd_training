@@ -1,10 +1,3 @@
-/**
- * @file costmap_core.hpp
- * @author Sean Yang
- * @brief Header file for the CostmapCore class that handles costmap generation and updating.
- * @date 2025-09-10
- */
-
 #ifndef COSTMAP_CORE_HPP_
 #define COSTMAP_CORE_HPP_
 

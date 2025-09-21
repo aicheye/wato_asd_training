@@ -23,7 +23,7 @@ namespace robot
 
     void integrateMap(const nav_msgs::msg::OccupancyGrid::SharedPtr costmap, const geometry_msgs::msg::TransformStamped::SharedPtr transform);
 
-    nav_msgs::msg::OccupancyGrid getMap();
+    nav_msgs::msg::OccupancyGrid::SharedPtr getMap();
 
   private:
     rclcpp::Logger logger_;

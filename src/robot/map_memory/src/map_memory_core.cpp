@@ -1,3 +1,11 @@
+/**
+ * @file map_memory_core.cpp
+ * @author Sean Yang
+ * @brief Logic for merging multiple costmaps within the robot frame into
+ *        a global map in the simulation frame.
+ * @date 2025-09-21
+ */
+
 #include "map_memory_core.hpp"
 
 namespace robot
@@ -7,11 +15,11 @@ namespace robot
       : global_map_(std::make_shared<nav_msgs::msg::OccupancyGrid>()), logger_(logger) {}
 
   void MapMemoryCore::initialize(
-    int height, 
-    int width, 
-    double resolution, 
-    geometry_msgs::msg::Pose origin, 
-    int unknown_cost)
+      int height,
+      int width,
+      double resolution,
+      geometry_msgs::msg::Pose origin,
+      int unknown_cost)
   {
     unknown_cost_ = unknown_cost;
 
@@ -21,24 +29,27 @@ namespace robot
     global_map_->info.resolution = resolution;
     global_map_->info.origin = origin;
     global_map_->data = std::vector<int8_t>(height * width, unknown_cost); // unknown
-    RCLCPP_INFO(logger_, "Initialized global map with size %dx%d, resolution %.2f", 
-      width, height, resolution);
+    RCLCPP_INFO(logger_, "Initialized global map with size %dx%d, resolution %.2f",
+                width, height, resolution);
   }
 
   void MapMemoryCore::integrateMap(
-    const nav_msgs::msg::OccupancyGrid::SharedPtr costmap, const geometry_msgs::msg::TransformStamped::SharedPtr transform )
+      const nav_msgs::msg::OccupancyGrid::SharedPtr costmap, const geometry_msgs::msg::TransformStamped::SharedPtr transform)
   {
-    if (!costmap) {
+    if (!costmap)
+    {
       RCLCPP_WARN(logger_, "Costmap is null, skipping integration");
       return;
     }
-    
-    if (!transform) {
+
+    if (!transform)
+    {
       RCLCPP_WARN(logger_, "Transform is null, skipping integration");
       return;
     }
 
-    for (size_t i = 0; i < costmap->data.size(); ++i) {
+    for (size_t i = 0; i < costmap->data.size(); ++i)
+    {
       int costmap_x_idx = i % costmap->info.width;
       int costmap_y_idx = i / costmap->info.width;
       double costmap_x = (costmap_x_idx + 0.5) * costmap->info.resolution + costmap->info.origin.position.x;
@@ -58,21 +69,23 @@ namespace robot
       int global_y = static_cast<int>(std::round((transformed_point.point.y - global_map_->info.origin.position.y) / global_map_->info.resolution));
 
       if (global_x >= 0 && global_x < static_cast<int>(global_map_->info.width) &&
-          global_y >= 0 && global_y < static_cast<int>(global_map_->info.height)) {
+          global_y >= 0 && global_y < static_cast<int>(global_map_->info.height))
+      {
         size_t global_idx = global_y * global_map_->info.width + global_x;
         // only update if the costmap cell is known
-        if (costmap->data[i] != unknown_cost_ && costmap->data[i] > global_map_->data[global_idx]) {
+        if (costmap->data[i] != unknown_cost_ && costmap->data[i] > global_map_->data[global_idx])
+        {
           global_map_->data[global_idx] = costmap->data[i];
         }
       }
     }
 
     global_map_->header.stamp = costmap->header.stamp;
-    global_map_->info.map_load_time = costmap->info.map_load_time;
+    global_map_->info.map_load_time = costmap->header.stamp;
   }
 
-  nav_msgs::msg::OccupancyGrid MapMemoryCore::getMap()
+  nav_msgs::msg::OccupancyGrid::SharedPtr MapMemoryCore::getMap()
   {
-    return *global_map_;
+    return global_map_;
   }
 }
