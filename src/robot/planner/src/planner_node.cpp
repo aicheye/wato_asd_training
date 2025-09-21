@@ -1,10 +1,3 @@
-#include "planner_node.hpp"
-#include "nav_msgs/msg/occupancy_grid.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/point_stamped.hpp"
-
-#include "geometry_msgs/msg/point.hpp"
-#include "rclcpp/rclcpp.hpp"
 #include <queue>
 #include <unordered_map>
 #include <vector>
@@ -13,9 +6,16 @@
 #include <functional>
 #include <iostream>
 #include <chrono>
-#include "nav_msgs/msg/odometry.hpp"
-#include "nav_msgs/msg/path.hpp"
 #include <chrono>
+
+// ROS2 core
+#include "rclcpp/rclcpp.hpp"
+// ROS2 message types
+#include "nav_msgs/msg/occupancy_grid.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "geometry_msgs/msg/point_stamped.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
 
 struct CellIndex
 {
@@ -84,7 +84,7 @@ class PlannerNode : public rclcpp::Node{
       odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(
       "/odom/filtered", 10, std::bind(&PlannerNode::odomCallback, this, _1));
 
-      path_publisher = this->create_publisher<nav_msgs::msg::Path>("/path", 10);
+      path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/path", 10);
 
       timer = this->create_wall_timer(std::chrono::milliseconds(500), std::bind(&PlannerNode::timerCallback, this));
     }
@@ -96,7 +96,7 @@ class PlannerNode : public rclcpp::Node{
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub;
     rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr goal_sub;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_publisher;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
     rclcpp::TimerBase::SharedPtr timer;
  
     // Data Storage
@@ -221,8 +221,16 @@ class PlannerNode : public rclcpp::Node{
       }
 
       nav_msgs::msg::Path path;
-      path.header.stamp = this->get_clock()->now();
+      path.header.stamp = this->now();
       path.header.frame_id = "map";
+
+      geometry_msgs::msg::PoseStamped pose;
+      pose.header = path.header;
+      pose.pose.position.x = 1.0;
+      pose.pose.position.y = 2.0;
+      pose.pose.position.z = 0.0;
+      pose.pose.orientation.w = 1.0;
+      path.poses.push_back(pose);
 
       CellIndex start_idx = worldToGrid(robot_pose_.position.x, robot_pose_.position.y, current_map_);
       CellIndex goal_idx = worldToGrid(goal_.point.x, goal_.point.y, current_map_);
@@ -239,7 +247,16 @@ class PlannerNode : public rclcpp::Node{
           path.poses.push_back(gridToWorld(cell, current_map_));
       }
 
-      path_publisher->publish(path);
+      path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path_topic", 10);
       RCLCPP_INFO(this->get_logger(), "Path published with %zu waypoints", path.poses.size());
   }
 };
+
+int main(int argc, char **argv)
+{
+    rclcpp::init(argc, argv);
+    auto node = std::make_shared<PlannerNode>();
+    rclcpp::spin(node);
+    rclcpp::shutdown();
+    return 0;
+}
