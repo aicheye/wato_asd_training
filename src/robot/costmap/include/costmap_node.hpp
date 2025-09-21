@@ -1,10 +1,3 @@
-/**
- * @file costmap_node.hpp
- * @author Sean Yang
- * @brief Header file for the CostmapNode class that handles LIDAR data subscription and costmap publishing.
- * @date 2025-09-10
- */
-
 #ifndef COSTMAP_NODE_HPP_
 #define COSTMAP_NODE_HPP_
 
@@ -22,12 +15,12 @@ private:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_pub_;
 
   // costmap parameters
-  const int width_ = 100; // cells
-  const int height_ = 100; // cells
+  const int width_ = 100;         // cells
+  const int height_ = 100;        // cells
   const double resolution_ = 0.1; // meters/cell
-  const double origin_x_ = -5.0; // meters
-  const double origin_y_ = -5.0; // meters
-  const double origin_z_ = 0.0; // meters
+  const double origin_x_ = -5.0;  // meters
+  const double origin_y_ = -5.0;  // meters
+  const double origin_z_ = 0.0;   // meters
   const double origin_orientation_x_ = 0.0;
   const double origin_orientation_y_ = 0.0;
   const double origin_orientation_z_ = 0.0;

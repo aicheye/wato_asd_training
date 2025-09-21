@@ -4,10 +4,12 @@
 #include <nav_msgs/msg/path.hpp>
 #include <optional>
 
-namespace robot {
+namespace robot
+{
 
-class ControlCore {
-public:
+  class ControlCore
+  {
+  public:
     ControlCore();
 
     void setParameters(double lookahead_distance, double goal_tolerance, double linear_speed);
@@ -17,7 +19,7 @@ public:
     std::optional<geometry_msgs::msg::Twist> computeCommand(
         double robot_x, double robot_y, double robot_theta) const;
 
-private:
+  private:
     nav_msgs::msg::Path current_path_;
     double lookahead_distance_;
     double goal_tolerance_;
@@ -25,7 +27,7 @@ private:
 
     std::optional<geometry_msgs::msg::PoseStamped> findLookaheadPoint(double robot_x, double robot_y) const;
     double computeDistance(double x1, double y1, double x2, double y2) const;
-};
+  };
 
 } // namespace robot
 #endif // CONTROL_CORE_HPP_
