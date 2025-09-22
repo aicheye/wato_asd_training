@@ -12,7 +12,7 @@
 namespace robot
 {
 
-  ControlCore::ControlCore() : lookahead_distance_(1.0), goal_tolerance_(0.1), linear_speed_(0.5)
+  ControlCore::ControlCore() : lookahead_distance_(1.0), goal_tolerance_(0.1), linear_speed_(1.0)
   {}
 
   void ControlCore::setParameters(double lookahead_distance, double goal_tolerance, double linear_speed)
@@ -30,8 +30,12 @@ namespace robot
   std::optional<geometry_msgs::msg::Twist> ControlCore::computeCommand(double robot_x, double robot_y,
                                                                        double robot_theta) const
   {
-    if (current_path_.poses.empty())
-      return std::nullopt;
+    if (current_path_.poses.empty()) {
+      geometry_msgs::msg::Twist cmd_vel = geometry_msgs::msg::Twist();
+      cmd_vel.linear.x = 0.0;
+      cmd_vel.angular.z = 0.0;
+      return cmd_vel;
+    }
 
     auto lookahead_point_opt = findLookaheadPoint(robot_x, robot_y);
     if (!lookahead_point_opt)
@@ -50,7 +54,7 @@ namespace robot
     double curvature = 2.0 * local_y / (L * L);
 
     geometry_msgs::msg::Twist cmd_vel;
-    cmd_vel.linear.x = linear_speed_;
+    cmd_vel.linear.x = local_x > 0 ? local_x * linear_speed_ : 0;
     cmd_vel.angular.z = linear_speed_ * curvature;
 
     return cmd_vel;

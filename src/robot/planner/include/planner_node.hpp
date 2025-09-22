@@ -14,6 +14,27 @@
 #include <functional>
 #include "planner_core.hpp"
 
+struct CellIndex {
+  int x, y;
+  CellIndex(int xx=0, int yy=0) : x(xx), y(yy) {}
+  bool operator==(const CellIndex &other) const { return x==other.x && y==other.y; }
+};
+
+struct CellIndexHash {
+  std::size_t operator()(const CellIndex &idx) const {
+    return std::hash<int>()(idx.x) ^ (std::hash<int>()(idx.y)<<1);
+  }
+};
+
+struct AStarNode {
+  CellIndex idx; double f;
+  AStarNode(CellIndex i, double f_score) : idx(i), f(f_score) {}
+};
+
+struct CompareF {
+  bool operator()(const AStarNode &a, const AStarNode &b){ return a.f > b.f; }
+};
+
 class PlannerNode : public rclcpp::Node {
 public:
     PlannerNode();
@@ -34,11 +55,12 @@ private:
     geometry_msgs::msg::PointStamped goal_;
     nav_msgs::msg::OccupancyGrid map_;
     std::mutex map_mutex_;
-    PlannerCore planner_;
     State state_;
     bool goal_received_;
     rclcpp::Time goal_start_time_;
+    rclcpp::Time last_path_time_;
     double goal_timeout_;
+    double path_refresh_interval_;
     double goal_tolerance_;
 
     // Callbacks
@@ -48,9 +70,9 @@ private:
     void timerCallback();
 
     // Helpers
-    void resetGoal();
     CellIndex worldToGrid(double wx, double wy);
     geometry_msgs::msg::PoseStamped gridToWorld(const CellIndex &idx);
+    void resetGoal();
     void planPath();
 };
 

@@ -31,7 +31,7 @@ private:
 
   nav_msgs::msg::Odometry::SharedPtr latest_odom_ = nullptr;
   bool should_update_map_;
-  const double distance_threshold_ = 5.0;
+  const double distance_threshold_ = 1.0;
 
   const int width_ = 400;         // cells
   const int height_ = 400;        // cells
@@ -44,7 +44,7 @@ private:
   const double origin_orientation_z_ = 0.0;
   const double origin_orientation_w_ = 1.0;
   geometry_msgs::msg::Pose origin_;
-  const int unknown_cost_ = -1;
+  const int unknown_cost_ = 0;
 
   // callback functions
   void costmapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr costmap);

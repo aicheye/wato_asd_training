@@ -21,8 +21,6 @@ namespace robot
       geometry_msgs::msg::Pose origin,
       int unknown_cost)
   {
-    unknown_cost_ = unknown_cost;
-
     global_map_->header.frame_id = "sim_world";
     global_map_->info.height = height;
     global_map_->info.width = width;
@@ -72,8 +70,7 @@ namespace robot
           global_y >= 0 && global_y < static_cast<int>(global_map_->info.height))
       {
         size_t global_idx = global_y * global_map_->info.width + global_x;
-        // only update if the costmap cell is known
-        if (costmap->data[i] != unknown_cost_ && costmap->data[i] > global_map_->data[global_idx])
+        if (costmap->data[i] > global_map_->data[global_idx])
         {
           global_map_->data[global_idx] = costmap->data[i];
         }
